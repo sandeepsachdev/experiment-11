@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Spring Boot Pacman</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="game-container">
+        <h1>PAC-MAN</h1>
+        <div class="hud">
+            <span>Score: <span id="score">0</span></span>
+            <span>Lives: <span id="lives">3</span></span>
+        </div>
+        <canvas id="game" width="448" height="496"></canvas>
+        <div id="message"></div>
+        <p class="controls">Arrow keys to move &middot; Press R to restart</p>
+    </div>
+    <script src="/js/pacman.js"></script>
+</body>
+</html>
