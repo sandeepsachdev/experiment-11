@@ -131,6 +131,21 @@
         ArrowRight: { x: 1, y: 0 }
     };
 
+    const DIR_BY_NAME = {
+        up:    { x: 0, y: -1 },
+        down:  { x: 0, y: 1 },
+        left:  { x: -1, y: 0 },
+        right: { x: 1, y: 0 }
+    };
+
+    function setDirection(name) {
+        if (DIR_BY_NAME[name]) {
+            pacman.nextDir = DIR_BY_NAME[name];
+        } else if (name === 'restart') {
+            init();
+        }
+    }
+
     document.addEventListener('keydown', (e) => {
         if (DIRS[e.key]) {
             pacman.nextDir = DIRS[e.key];
@@ -140,6 +155,48 @@
             init();
         }
     });
+
+    // On-screen D-pad
+    document.querySelectorAll('.dpad-btn').forEach((btn) => {
+        const dir = btn.getAttribute('data-dir');
+        const trigger = (e) => {
+            e.preventDefault();
+            setDirection(dir);
+        };
+        btn.addEventListener('touchstart', trigger, { passive: false });
+        btn.addEventListener('mousedown', trigger);
+        btn.addEventListener('click', (e) => e.preventDefault());
+    });
+
+    // Swipe gestures on the canvas
+    const canvasEl = canvas;
+    let touchStart = null;
+    const SWIPE_THRESHOLD = 20;
+
+    canvasEl.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        const t = e.touches[0];
+        touchStart = { x: t.clientX, y: t.clientY };
+    }, { passive: true });
+
+    canvasEl.addEventListener('touchmove', (e) => {
+        if (!touchStart || e.touches.length !== 1) return;
+        const t = e.touches[0];
+        const dx = t.clientX - touchStart.x;
+        const dy = t.clientY - touchStart.y;
+        const absX = Math.abs(dx);
+        const absY = Math.abs(dy);
+        if (Math.max(absX, absY) < SWIPE_THRESHOLD) return;
+        e.preventDefault();
+        if (absX > absY) {
+            setDirection(dx > 0 ? 'right' : 'left');
+        } else {
+            setDirection(dy > 0 ? 'down' : 'up');
+        }
+        touchStart = { x: t.clientX, y: t.clientY };
+    }, { passive: false });
+
+    canvasEl.addEventListener('touchend', () => { touchStart = null; }, { passive: true });
 
     function tileAt(px, py) {
         return { c: Math.floor(px / TILE), r: Math.floor(py / TILE) };
