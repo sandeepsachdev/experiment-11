@@ -49,18 +49,62 @@
         .wet { color: var(--wet); }
         .dry { color: var(--dry); }
         .chart-box { position: relative; height: 320px; }
-        table { width: 100%; border-collapse: collapse; font-size: .92rem; }
-        th, td { padding: 9px 10px; text-align: right; border-bottom: 1px solid var(--line); }
-        th:first-child, td:first-child { text-align: left; }
-        thead th { font-size: .76rem; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
-        tbody tr:hover { background: #fafbfc; }
-        td.num { font-variant-numeric: tabular-nums; }
+        .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        table.detail { width: 100%; border-collapse: collapse; font-size: .92rem; }
+        table.detail th, table.detail td {
+            padding: 10px 12px; text-align: right; white-space: nowrap;
+            border-bottom: 1px solid var(--line);
+        }
+        table.detail th:first-child, table.detail td:first-child { text-align: left; }
+        table.detail thead th {
+            font-size: .72rem; text-transform: uppercase; letter-spacing: .03em;
+            color: var(--muted); font-weight: 600;
+        }
+        table.detail th.group, table.detail td.group { border-left: 1px solid var(--line); }
+        table.detail tbody tr:nth-child(even) { background: #fafbfc; }
+        table.detail tbody tr:hover { background: #eef4f8; }
+        table.detail td.num { font-variant-numeric: tabular-nums; }
+        table.detail td.month { font-weight: 600; }
         .error {
             background: #fdecea; border: 1px solid #f5c6c2; color: #8a1c12;
             padding: 16px 18px; border-radius: 12px; margin-bottom: 22px;
         }
         footer { color: var(--muted); font-size: .82rem; margin-top: 8px; line-height: 1.6; }
         a { color: #2e6b8f; }
+
+        @media (max-width: 720px) {
+            header { padding: 26px 16px; }
+            header h1 { font-size: 1.3rem; }
+            .wrap { padding: 0 14px 40px; }
+            .card { padding: 16px; }
+            .chart-box { height: 260px; }
+            .table-scroll { overflow-x: visible; }
+            table.detail thead { display: none; }
+            table.detail, table.detail tbody, table.detail tr, table.detail td { display: block; width: 100%; }
+            table.detail tr {
+                border: 1px solid var(--line); border-radius: 10px;
+                margin-bottom: 12px; padding: 6px 14px;
+            }
+            table.detail tbody tr:nth-child(even),
+            table.detail tbody tr:hover { background: #fff; }
+            table.detail td {
+                display: flex; justify-content: space-between; align-items: baseline;
+                gap: 16px; padding: 8px 0; text-align: right;
+                white-space: normal; border-bottom: 1px solid #eef0f2;
+            }
+            table.detail td:last-child { border-bottom: none; }
+            table.detail td.group { border-left: none; }
+            table.detail td::before {
+                content: attr(data-label); text-align: left;
+                color: var(--muted); font-weight: 600; font-size: .82rem;
+            }
+            table.detail td.month {
+                text-align: left; font-size: 1.05rem; font-weight: 700; color: var(--ink);
+                padding: 4px 0 10px; margin-bottom: 4px;
+                border-bottom: 2px solid var(--line);
+            }
+            table.detail td.month::before { content: none; }
+        }
     </style>
 </head>
 <body>
@@ -127,34 +171,43 @@
 
         <section class="card">
             <h2>Month-by-month detail</h2>
-            <table>
-                <thead>
-                <tr>
-                    <th>Month</th>
-                    <th>Avg temp (°C)</th>
-                    <th>Normal</th>
-                    <th>&Delta; Temp</th>
-                    <th>Rainfall (mm)</th>
-                    <th>Normal</th>
-                    <th>&Delta; Rain</th>
-                    <th>% of normal</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="m : ${report.months}">
-                    <td th:text="${m.label}">Month</td>
-                    <td class="num" th:text="${#numbers.formatDecimal(m.avgTemp, 1, 1)}">0.0</td>
-                    <td class="num" th:text="${#numbers.formatDecimal(m.normalTemp, 1, 1)}">0.0</td>
-                    <td class="num" th:classappend="${m.tempAnomaly >= 0} ? 'warm' : 'cool'"
-                        th:text="${(m.tempAnomaly > 0 ? '+' : '') + #numbers.formatDecimal(m.tempAnomaly, 1, 1)}">+0.0</td>
-                    <td class="num" th:text="${#numbers.formatDecimal(m.rainfall, 1, 1)}">0.0</td>
-                    <td class="num" th:text="${#numbers.formatDecimal(m.normalRainfall, 1, 1)}">0.0</td>
-                    <td class="num" th:classappend="${m.rainfallAnomaly >= 0} ? 'wet' : 'dry'"
-                        th:text="${(m.rainfallAnomaly > 0 ? '+' : '') + #numbers.formatDecimal(m.rainfallAnomaly, 1, 1)}">+0.0</td>
-                    <td class="num" th:text="${#numbers.formatDecimal(m.rainfallPctOfNormal, 1, 0) + '%'}">100%</td>
-                </tr>
-                </tbody>
-            </table>
+            <div class="table-scroll">
+                <table class="detail">
+                    <thead>
+                    <tr>
+                        <th>Month</th>
+                        <th>Avg temp (°C)</th>
+                        <th>Normal</th>
+                        <th>&Delta; Temp</th>
+                        <th class="group">Rainfall (mm)</th>
+                        <th>Normal</th>
+                        <th>&Delta; Rain</th>
+                        <th>% of normal</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="m : ${report.months}">
+                        <td class="month" th:text="${m.label}">Month</td>
+                        <td class="num" data-label="Avg temp (°C)"
+                            th:text="${#numbers.formatDecimal(m.avgTemp, 1, 1)}">0.0</td>
+                        <td class="num" data-label="Normal temp (°C)"
+                            th:text="${#numbers.formatDecimal(m.normalTemp, 1, 1)}">0.0</td>
+                        <td class="num" data-label="Δ Temp (°C)"
+                            th:classappend="${m.tempAnomaly >= 0} ? 'warm' : 'cool'"
+                            th:text="${(m.tempAnomaly > 0 ? '+' : '') + #numbers.formatDecimal(m.tempAnomaly, 1, 1)}">+0.0</td>
+                        <td class="num group" data-label="Rainfall (mm)"
+                            th:text="${#numbers.formatDecimal(m.rainfall, 1, 1)}">0.0</td>
+                        <td class="num" data-label="Normal rain (mm)"
+                            th:text="${#numbers.formatDecimal(m.normalRainfall, 1, 1)}">0.0</td>
+                        <td class="num" data-label="Δ Rain (mm)"
+                            th:classappend="${m.rainfallAnomaly >= 0} ? 'wet' : 'dry'"
+                            th:text="${(m.rainfallAnomaly > 0 ? '+' : '') + #numbers.formatDecimal(m.rainfallAnomaly, 1, 1)}">+0.0</td>
+                        <td class="num" data-label="% of normal"
+                            th:text="${#numbers.formatDecimal(m.rainfallPctOfNormal, 1, 0) + '%'}">100%</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
         </section>
 
         <footer>

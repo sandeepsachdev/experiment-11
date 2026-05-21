@@ -39,6 +39,9 @@ class WeatherControllerTest {
                 .andExpect(content().string(containsString("Apr 2026")))
                 .andExpect(content().string(containsString("tempChart")))
                 .andExpect(content().string(containsString("Month-by-month detail")))
+                // responsive detail table: scroll wrapper + per-cell labels for the mobile card layout
+                .andExpect(content().string(containsString("table-scroll")))
+                .andExpect(content().string(containsString("data-label=\"Avg temp (°C)\"")))
                 // anomaly cell colour-coding for the success path
                 .andExpect(content().string(containsString("class=\"num warm\"")));
     }
