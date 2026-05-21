@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Cherry Brook Weather — Last 12 Months</title>
+    <style>
+        :root {
+            --warm: #c0392b;
+            --cool: #2471a3;
+            --wet: #1e8449;
+            --dry: #b9770e;
+            --ink: #1f2933;
+            --muted: #69707a;
+            --line: #e3e6ea;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: var(--ink);
+            background: #f4f6f8;
+        }
+        .wrap { max-width: 1000px; margin: 0 auto; padding: 0 20px 48px; }
+        header {
+            background: linear-gradient(135deg, #1d3b5a, #2e6b8f);
+            color: #fff;
+            padding: 36px 20px;
+            margin-bottom: 28px;
+        }
+        header .inner { max-width: 1000px; margin: 0 auto; }
+        header h1 { margin: 0 0 6px; font-size: 1.7rem; }
+        header p { margin: 0; opacity: .85; font-size: .95rem; }
+        h2 { font-size: 1.05rem; margin: 0 0 14px; }
+        .card {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 22px;
+        }
+        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 22px; }
+        .stat { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+        .stat .k { font-size: .8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+        .stat .v { font-size: 1.7rem; font-weight: 700; margin-top: 6px; }
+        .stat .d { font-size: .85rem; color: var(--muted); margin-top: 4px; }
+        .warm { color: var(--warm); }
+        .cool { color: var(--cool); }
+        .wet { color: var(--wet); }
+        .dry { color: var(--dry); }
+        .chart-box { position: relative; height: 320px; }
+        table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+        th, td { padding: 9px 10px; text-align: right; border-bottom: 1px solid var(--line); }
+        th:first-child, td:first-child { text-align: left; }
+        thead th { font-size: .76rem; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+        tbody tr:hover { background: #fafbfc; }
+        td.num { font-variant-numeric: tabular-nums; }
+        .error {
+            background: #fdecea; border: 1px solid #f5c6c2; color: #8a1c12;
+            padding: 16px 18px; border-radius: 12px; margin-bottom: 22px;
+        }
+        footer { color: var(--muted); font-size: .82rem; margin-top: 8px; line-height: 1.6; }
+        a { color: #2e6b8f; }
+    </style>
+</head>
+<body>
+<header>
+    <div class="inner">
+        <h1>Cherry Brook Weather — Last 12 Months</h1>
+        <p th:if="${report != null}"
+           th:text="${report.locationName + '  ·  ' + report.latitude + '°, ' + report.longitude + '°  ·  ' + report.periodLabel}">
+            Location · period
+        </p>
+        <p th:if="${report == null}">Temperature &amp; rainfall versus the climate normal</p>
+    </div>
+</header>
+
+<div class="wrap">
+
+    <div th:if="${error}" class="error" th:text="${error}">Something went wrong.</div>
+
+    <div th:if="${report != null}">
+
+        <section class="cards">
+            <div class="stat">
+                <div class="k">Avg temperature anomaly</div>
+                <div class="v" th:classappend="${report.avgTempAnomaly >= 0} ? 'warm' : 'cool'"
+                     th:text="${(report.avgTempAnomaly > 0 ? '+' : '') + #numbers.formatDecimal(report.avgTempAnomaly, 1, 1) + ' °C'}">
+                    +0.0 °C
+                </div>
+                <div class="d" th:text="'vs ' + ${report.baselineLabel}">vs baseline</div>
+            </div>
+            <div class="stat">
+                <div class="k">Total rainfall</div>
+                <div class="v" th:text="${#numbers.formatDecimal(report.totalRainfall, 1, 1) + ' mm'}">0 mm</div>
+                <div class="d" th:text="'normal: ' + ${#numbers.formatDecimal(report.totalNormalRainfall, 1, 1)} + ' mm'">
+                    normal
+                </div>
+            </div>
+            <div class="stat">
+                <div class="k">Rainfall vs normal</div>
+                <div class="v" th:classappend="${report.rainfallAnomaly >= 0} ? 'wet' : 'dry'"
+                     th:text="${#numbers.formatDecimal(report.rainfallPctOfNormal, 1, 0) + '%'}">100%</div>
+                <div class="d"
+                     th:text="${(report.rainfallAnomaly > 0 ? '+' : '') + #numbers.formatDecimal(report.rainfallAnomaly, 1, 1)} + ' mm vs normal'">
+                    anomaly
+                </div>
+            </div>
+            <div class="stat">
+                <div class="k">Months above normal</div>
+                <div class="v" th:text="${report.warmerMonths + ' / 12'}">0 / 12</div>
+                <div class="d" th:text="${report.warmerMonths + ' warmer · ' + report.wetterMonths + ' wetter than normal'}">
+                    detail
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Monthly average temperature vs normal</h2>
+            <div class="chart-box"><canvas id="tempChart"></canvas></div>
+        </section>
+
+        <section class="card">
+            <h2>Monthly rainfall vs normal</h2>
+            <div class="chart-box"><canvas id="rainChart"></canvas></div>
+        </section>
+
+        <section class="card">
+            <h2>Month-by-month detail</h2>
+            <table>
+                <thead>
+                <tr>
+                    <th>Month</th>
+                    <th>Avg temp (°C)</th>
+                    <th>Normal</th>
+                    <th>&Delta; Temp</th>
+                    <th>Rainfall (mm)</th>
+                    <th>Normal</th>
+                    <th>&Delta; Rain</th>
+                    <th>% of normal</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="m : ${report.months}">
+                    <td th:text="${m.label}">Month</td>
+                    <td class="num" th:text="${#numbers.formatDecimal(m.avgTemp, 1, 1)}">0.0</td>
+                    <td class="num" th:text="${#numbers.formatDecimal(m.normalTemp, 1, 1)}">0.0</td>
+                    <td class="num" th:classappend="${m.tempAnomaly >= 0} ? 'warm' : 'cool'"
+                        th:text="${(m.tempAnomaly > 0 ? '+' : '') + #numbers.formatDecimal(m.tempAnomaly, 1, 1)}">+0.0</td>
+                    <td class="num" th:text="${#numbers.formatDecimal(m.rainfall, 1, 1)}">0.0</td>
+                    <td class="num" th:text="${#numbers.formatDecimal(m.normalRainfall, 1, 1)}">0.0</td>
+                    <td class="num" th:classappend="${m.rainfallAnomaly >= 0} ? 'wet' : 'dry'"
+                        th:text="${(m.rainfallAnomaly > 0 ? '+' : '') + #numbers.formatDecimal(m.rainfallAnomaly, 1, 1)}">+0.0</td>
+                    <td class="num" th:text="${#numbers.formatDecimal(m.rainfallPctOfNormal, 1, 0) + '%'}">100%</td>
+                </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <footer>
+            Source: <a href="https://open-meteo.com/" rel="noopener" target="_blank">Open-Meteo</a>
+            historical archive (ERA5 reanalysis). Normals are the
+            <span th:text="${report.baselineLabel}">baseline</span>.
+            Anomalies are the observed value minus the normal for that calendar month —
+            positive temperature means warmer than usual; positive rainfall means wetter than usual.
+            <br/>
+            Generated <span th:text="${report.generatedAt}">now</span>.
+            JSON available at <a href="/api/weather">/api/weather</a>.
+        </footer>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script th:if="${report != null}" th:inline="javascript">
+    /*<![CDATA[*/
+    const REPORT = JSON.parse(/*[[${reportJson}]]*/ '{}');
+    /*]]>*/
+
+    (function () {
+        if (typeof Chart === 'undefined' || !REPORT.months) {
+            return;
+        }
+        const months = REPORT.months;
+        const labels = months.map(m => m.label);
+        const warm = 'rgba(192,57,43,0.78)';
+        const cool = 'rgba(36,113,163,0.78)';
+        const wet = 'rgba(30,132,73,0.78)';
+        const dry = 'rgba(185,119,14,0.78)';
+
+        new Chart(document.getElementById('tempChart'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Average temperature (°C)',
+                        data: months.map(m => m.avgTemp),
+                        backgroundColor: months.map(m => m.tempAnomaly >= 0 ? warm : cool),
+                        order: 2
+                    },
+                    {
+                        label: 'Normal',
+                        type: 'line',
+                        data: months.map(m => m.normalTemp),
+                        borderColor: '#33404d',
+                        borderDash: [6, 4],
+                        pointRadius: 3,
+                        pointBackgroundColor: '#33404d',
+                        fill: false,
+                        order: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } },
+                scales: { y: { title: { display: true, text: '°C' } } }
+            }
+        });
+
+        new Chart(document.getElementById('rainChart'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Rainfall (mm)',
+                        data: months.map(m => m.rainfall),
+                        backgroundColor: months.map(m => m.rainfallAnomaly >= 0 ? wet : dry),
+                        order: 2
+                    },
+                    {
+                        label: 'Normal',
+                        type: 'line',
+                        data: months.map(m => m.normalRainfall),
+                        borderColor: '#33404d',
+                        borderDash: [6, 4],
+                        pointRadius: 3,
+                        pointBackgroundColor: '#33404d',
+                        fill: false,
+                        order: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } },
+                scales: { y: { title: { display: true, text: 'mm' }, beginAtZero: true } }
+            }
+        });
+    })();
+</script>
+</body>
+</html>
